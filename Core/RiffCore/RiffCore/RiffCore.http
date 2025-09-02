@@ -1,0 +1,6 @@
+@RiffCore_HostAddress = http://localhost:5216
+
+GET {{RiffCore_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
