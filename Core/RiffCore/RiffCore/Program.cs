@@ -35,7 +35,7 @@ var tracker = app.Services.GetRequiredService<IUniversalRequestTracker>();
 await rabbitService.InitializeAsync();
 await rabbitService.StartConsumingAsync<TestMessage>("output", message =>
 {
-    logger.LogInformation("Received: {message}", message.Message);
+    //logger.LogInformation("Received: {message}", message.Message);
     tracker.TrySetResult(message.CorrelationId, message);
     return Task.CompletedTask;
 });
