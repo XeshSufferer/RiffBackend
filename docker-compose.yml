@@ -1,0 +1,40 @@
+services:
+  core:
+    build: ./Core/RiffCore/RiffCore
+    ports:
+      - "3030:3030"
+    networks:
+      - main-network
+    environment:
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+    depends_on:
+      - rabbitmq
+      - database
+
+
+  database:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    networks:
+      - main-network
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=password
+  
+
+  rabbitmq:
+    image: rabbitmq:3.12-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - main-network
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest    
+
+networks:
+  main-network:
+    driver: bridge
