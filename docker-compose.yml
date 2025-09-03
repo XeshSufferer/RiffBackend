@@ -21,8 +21,8 @@ services:
       - main-network
     environment:
       - MONGO_INITDB_ROOT_USERNAME=admin
-      - MONGO_INITDB_ROOT_PASSWORD=password
-  
+      - MONGO_INITDB_ROOT_PASSWORD=admin
+
 
   rabbitmq:
     image: rabbitmq:3.12-management
