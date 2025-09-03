@@ -2,16 +2,25 @@ services:
   core:
     build: ./Core/RiffCore/RiffCore
     ports:
-      - "3030:3030"
+      - "3030:8080"
     networks:
       - main-network
     environment:
       - RABBITMQ_HOST=rabbitmq
       - RABBITMQ_PORT=5672
     depends_on:
-      - rabbitmq
-      - database
+      rabbitmq:
+        condition: service_healthy
+      database:
+        condition: service_healthy
 
+  rabbitmqgotester:
+    build: ./RabbitMQGoTester
+    networks:
+      - main-network
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
 
   database:
     image: mongo:latest
@@ -22,6 +31,14 @@ services:
     environment:
       - MONGO_INITDB_ROOT_USERNAME=admin
       - MONGO_INITDB_ROOT_PASSWORD=admin
+    command: >
+      mongod --quiet --logpath /dev/null
+    healthcheck:
+      test: ["CMD-SHELL", "mongosh --quiet --eval \"db.adminCommand({ ping: 1 }).ok\" | grep 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
 
 
   rabbitmq:
@@ -34,6 +51,15 @@ services:
     environment:
       - RABBITMQ_DEFAULT_USER=guest
       - RABBITMQ_DEFAULT_PASS=guest    
+    healthcheck:
+      test: ["CMD-SHELL", "rabbitmq-diagnostics -q ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+        
+
+
 
 networks:
   main-network:

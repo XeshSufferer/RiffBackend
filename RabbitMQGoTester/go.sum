@@ -1,0 +1,10 @@
+github.com/XeshSufferer/Rabbilite v0.0.0-20250903095527-aa87560374b0 h1:TB6gwuLEKhK8DcmoR67sdiJQ8m9LQHInt+M5h+7rcHA=
+github.com/XeshSufferer/Rabbilite v0.0.0-20250903095527-aa87560374b0/go.mod h1:vbHWBf9WcwgTEZNR7zz7X6kDMY68MfqmY9yCpfcj360=
+github.com/XeshSufferer/Rabbilite v0.0.0-20250903140238-143fa7ca26d9 h1:RMh9bWXCoLlitXlreDvYxgHLsscl9GotOYj71TmUlKs=
+github.com/XeshSufferer/Rabbilite v0.0.0-20250903140238-143fa7ca26d9/go.mod h1:vbHWBf9WcwgTEZNR7zz7X6kDMY68MfqmY9yCpfcj360=
+github.com/XeshSufferer/Rabbilite v0.0.0-20250903164958-7dc0036318d3 h1:iAqHZF+5WkgQI65j8CEKKC7qlRHtZDlIO7b91yQXBY4=
+github.com/XeshSufferer/Rabbilite v0.0.0-20250903164958-7dc0036318d3/go.mod h1:vbHWBf9WcwgTEZNR7zz7X6kDMY68MfqmY9yCpfcj360=
+github.com/rabbitmq/amqp091-go v1.10.0 h1:STpn5XsHlHGcecLmMFCtg7mqq0RnD+zFr4uzukfVhBw=
+github.com/rabbitmq/amqp091-go v1.10.0/go.mod h1:Hy4jKW5kQART1u+JkDTF9YYOQUHXqMuhrgxOEeS7G4o=
+go.uber.org/goleak v1.3.0 h1:2K3zAYmnTNqV73imy9J1T3WC+gmCePx2hEGkimedGto=
+go.uber.org/goleak v1.3.0/go.mod h1:CoHD4mav9JJNrW/WLlf7HGZPjdw8EucARQHekz1X6bE=
