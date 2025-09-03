@@ -5,9 +5,10 @@ namespace RiffCore.Tracker;
 public interface IUniversalRequestTracker
 {
     string CreatePendingRequest();
-    bool TrySetResult(string correlationId, string jsonData);
+    bool TrySetResult(string correlationId, object result);
+    bool TrySetException(string correlationId, Exception exception);
     Task<T> WaitForResponseAsync<T>(string correlationId);
-    bool TrySetResult(string correlationId, byte[] data);
-    Task<T> WaitForResponseAsync<T>(string correlationId, Encoding encoding = null);
+    bool TrySetJsonResult(string correlationId, string jsonData);
+    bool TrySetByteResult(string correlationId, byte[] data, Encoding encoding = null);
 
 }

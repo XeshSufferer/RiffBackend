@@ -1,6 +1,8 @@
-﻿using System.Collections.Concurrent;
+﻿using System;
+using System.Collections.Concurrent;
 using System.Text;
 using System.Text.Json;
+using System.Threading.Tasks;
 
 namespace RiffCore.Tracker;
 
@@ -13,7 +15,8 @@ public class UniversalRequestTracker : IUniversalRequestTracker
     {
         _jsonOptions = new JsonSerializerOptions
         {
-            PropertyNameCaseInsensitive = true 
+            PropertyNameCaseInsensitive = true,
+            PropertyNamingPolicy = null
         };
     }
 
@@ -21,74 +24,105 @@ public class UniversalRequestTracker : IUniversalRequestTracker
     {
         var correlationId = Guid.NewGuid().ToString();
         var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
-        _pendingRequests[correlationId] = tcs;
+        
+        if (!_pendingRequests.TryAdd(correlationId, tcs))
+        {
+            throw new InvalidOperationException($"Request with ID {correlationId} already exists");
+        }
+        
+        _ = Task.Delay(TimeSpan.FromSeconds(30))
+              .ContinueWith(_ => 
+              {
+                  if (_pendingRequests.TryRemove(correlationId, out var timeoutTcs))
+                  {
+                      timeoutTcs.TrySetException(new TimeoutException("Response timeout exceeded"));
+                  }
+              });
               
         return correlationId;
     }
-    
-    public bool TrySetResult(string correlationId, string jsonData)
+
+    public bool TrySetResult(string correlationId, object result)
     {
+        if (result == null)
+        {
+            return TrySetException(correlationId, new ArgumentNullException(nameof(result)));
+        }
+
         if (_pendingRequests.TryRemove(correlationId, out var tcs))
         {
-            return tcs.TrySetResult(jsonData);
-        }
-        return false;
-    }
-    
-    public async Task<T> WaitForResponseAsync<T>(string correlationId)
-    {
-        if (_pendingRequests.TryGetValue(correlationId, out var tcs))
-        {
-            var jsonResult = await tcs.Task as string;
-            
-            try
-            {
-                var result = JsonSerializer.Deserialize<T>(jsonResult, _jsonOptions);
-                if (result == null)
-                {
-                    throw new InvalidOperationException("Deserialization returned null");
-                }
-                return result;
-            }
-            catch (JsonException ex)
-            {
-                throw new InvalidOperationException($"Failed to deserialize response to type {typeof(T).Name}", ex);
-            }
-        }
-        throw new KeyNotFoundException($"Request with ID {correlationId} not found");
-    }
-    
-    public bool TrySetResult(string correlationId, byte[] data)
-    {
-        if (_pendingRequests.TryRemove(correlationId, out var tcs))
-        {
-            return tcs.TrySetResult(data);
+            return tcs.TrySetResult(result);
         }
         return false;
     }
 
-    public async Task<T> WaitForResponseAsync<T>(string correlationId, Encoding encoding = null)
+    public bool TrySetException(string correlationId, Exception exception)
     {
-        if (_pendingRequests.TryGetValue(correlationId, out var tcs))
+        if (_pendingRequests.TryRemove(correlationId, out var tcs))
         {
-            var byteResult = await tcs.Task as byte[];
-            encoding ??= Encoding.UTF8;
-            
-            try
-            {
-                var jsonString = encoding.GetString(byteResult);
-                var result = JsonSerializer.Deserialize<T>(jsonString, _jsonOptions);
-                if (result == null)
-                {
-                    throw new InvalidOperationException("Deserialization returned null");
-                }
-                return result;
-            }
-            catch (Exception ex) when (ex is JsonException || ex is DecoderFallbackException)
-            {
-                throw new InvalidOperationException($"Failed to deserialize response to type {typeof(T).Name}", ex);
-            }
+            return tcs.TrySetException(exception);
         }
-        throw new KeyNotFoundException($"Request with ID {correlationId} not found");
+        return false;
+    }
+
+
+    public async Task<T> WaitForResponseAsync<T>(string correlationId)
+    {
+        if (!_pendingRequests.TryGetValue(correlationId, out var tcs))
+        {
+            throw new KeyNotFoundException($"Request with ID {correlationId} not found");
+        }
+
+        try
+        {
+            var result = await tcs.Task;
+            
+            if (result is T typedResult)
+            {
+                return typedResult;
+            }
+
+            if (result is string jsonString)
+            {
+                return JsonSerializer.Deserialize<T>(jsonString, _jsonOptions) 
+                    ?? throw new InvalidOperationException("Deserialization returned null");
+            }
+            
+            if (result is byte[] byteData)
+            {
+                var json = Encoding.UTF8.GetString(byteData);
+                return JsonSerializer.Deserialize<T>(json, _jsonOptions) 
+                    ?? throw new InvalidOperationException("Deserialization returned null");
+            }
+            
+            throw new InvalidCastException($"Cannot convert {result.GetType().Name} to {typeof(T).Name}");
+        }
+        catch (JsonException ex)
+        {
+            throw new InvalidOperationException($"Failed to deserialize response to type {typeof(T).Name}", ex);
+        }
+    }
+    
+    public bool TrySetJsonResult(string correlationId, string jsonData)
+    {
+        if (string.IsNullOrEmpty(jsonData))
+        {
+            return TrySetException(correlationId, new ArgumentException("JSON data cannot be null or empty"));
+        }
+        return TrySetResult(correlationId, jsonData);
+    }
+
+    public bool TrySetByteResult(string correlationId, byte[] data, Encoding encoding = null)
+    {
+        encoding ??= Encoding.UTF8;
+        try
+        {
+            var jsonString = encoding.GetString(data);
+            return TrySetJsonResult(correlationId, jsonString);
+        }
+        catch (DecoderFallbackException ex)
+        {
+            return TrySetException(correlationId, new InvalidOperationException("Failed to decode byte array", ex));
+        }
     }
 }

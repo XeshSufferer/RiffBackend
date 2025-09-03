@@ -1,6 +1,7 @@
 using System.Net;
 using RabbitMQ.Client;
 using RiffCore.Services;
+using RiffCore.Tracker;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,6 +15,7 @@ builder.Services.AddSingleton<IRabbitMQService>(provider =>
     var service = new RabbitMQService("rabbitmq", 5672, "guest", "guest", logger);
     return service;
 });
+builder.Services.AddSingleton<IUniversalRequestTracker, UniversalRequestTracker>();
 
 var app = builder.Build();
 
@@ -27,21 +29,36 @@ if (app.Environment.IsDevelopment())
 
 var rabbitService = app.Services.GetRequiredService<IRabbitMQService>();
 var logger = app.Services.GetRequiredService<ILogger<Program>>();
+var tracker = app.Services.GetRequiredService<IUniversalRequestTracker>();
+
 
 await rabbitService.InitializeAsync();
-await rabbitService.StartConsumingAsync<string>("output", message =>
+await rabbitService.StartConsumingAsync<TestMessage>("output", message =>
 {
-    logger.LogInformation("Received: {message}", message);
+    logger.LogInformation("Received: {message}", message.Message);
+    tracker.TrySetResult(message.CorrelationId, message);
     return Task.CompletedTask;
 });
 
 
 
 
-app.MapGet("/", () =>
+app.MapGet("/", async () =>
 {
-    rabbitService.SendMessageAsync("Hello world!", "input");
-    return "Hello world!";
+    string correlationId = tracker.CreatePendingRequest();
+    var data = new TestMessage() { Message = "Write it me pls", CorrelationId = correlationId };
+    rabbitService.SendMessageAsync<TestMessage>(data, "input");
+
+    var endedData = await tracker.WaitForResponseAsync<TestMessage>(correlationId);
+    
+    return endedData.Message;
 });
 
 app.Run();
+
+
+struct TestMessage
+{
+    public string Message { get; set; }
+    public string CorrelationId { get; set; }
+}
