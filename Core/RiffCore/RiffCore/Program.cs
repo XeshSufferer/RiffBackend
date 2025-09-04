@@ -1,5 +1,6 @@
 using System.Net;
 using RabbitMQ.Client;
+using RiffCore.Models;
 using RiffCore.Services;
 using RiffCore.Tracker;
 
@@ -28,14 +29,23 @@ if (app.Environment.IsDevelopment())
 //app.UseHttpsRedirection();
 
 var rabbitService = app.Services.GetRequiredService<IRabbitMQService>();
-var logger = app.Services.GetRequiredService<ILogger<Program>>();
 var tracker = app.Services.GetRequiredService<IUniversalRequestTracker>();
+var logger = app.Services.GetRequiredService<ILogger<RabbitMQService>>();
+
+logger.LogInformation("Initialized");
 
 
 await rabbitService.InitializeAsync();
 await rabbitService.StartConsumingAsync<TestMessage>("output", message =>
 {
-    //logger.LogInformation("Received: {message}", message.Message);
+    tracker.TrySetResult(message.CorrelationId, message);
+    return Task.CompletedTask;
+});
+
+await rabbitService.StartConsumingAsync<User>("Riff.Core.Accounts.Output.Register", message =>
+{
+    logger.LogInformation("Riff.Core.Accounts.Output.Register received");
+    logger.LogInformation("output correlationid {id}", message.CorrelationId);
     tracker.TrySetResult(message.CorrelationId, message);
     return Task.CompletedTask;
 });
@@ -45,6 +55,7 @@ await rabbitService.StartConsumingAsync<TestMessage>("output", message =>
 
 app.MapGet("/", async () =>
 {
+    
     string correlationId = tracker.CreatePendingRequest();
     var data = new TestMessage() { Message = "Write it me pls", CorrelationId = correlationId };
     rabbitService.SendMessageAsync<TestMessage>(data, "input");
@@ -54,11 +65,21 @@ app.MapGet("/", async () =>
     return endedData.Message;
 });
 
+
+app.MapGet("/reg", async () =>
+{
+    string correlationId = tracker.CreatePendingRequest();
+    await rabbitService.SendMessageAsync<string>(correlationId, "Riff.Core.Accounts.Input.Register");
+    logger.LogInformation("input correlationid {id}", correlationId);
+    
+    
+    var endedData = await tracker.WaitForResponseAsync<User>(correlationId);
+    return endedData;
+});
+
 app.Run();
-
-
 struct TestMessage
 {
-    public string Message { get; set; }
+    public object Message { get; set; }
     public string CorrelationId { get; set; }
 }

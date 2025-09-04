@@ -22,15 +22,19 @@ services:
       rabbitmq:
         condition: service_healthy
 
+  accouts:
+    build: ./AccountsService
+    networks:
+      - main-network
+    depends_on:
+      - core
+
   database:
     image: mongo:latest
     ports:
       - "27017:27017"
     networks:
       - main-network
-    environment:
-      - MONGO_INITDB_ROOT_USERNAME=admin
-      - MONGO_INITDB_ROOT_PASSWORD=admin
     command: >
       mongod --quiet --logpath /dev/null
     healthcheck:
