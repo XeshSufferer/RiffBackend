@@ -22,7 +22,7 @@ services:
       rabbitmq:
         condition: service_healthy
 
-  accouts:
+  accounts:
     build: ./AccountsService
     networks:
       - main-network

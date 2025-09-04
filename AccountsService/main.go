@@ -14,7 +14,7 @@ var (
 
 func main() {
 
-	time.Sleep(1500 * time.Millisecond)
+	time.Sleep(3000 * time.Millisecond)
 
 	c, err := rabbitmq.NewConsumer(rabbitUri)
 	p, _ := rabbitmq.NewProducer(rabbitUri)
@@ -27,11 +27,11 @@ func main() {
 	}
 
 	c.StartConsuming("Riff.Core.Accounts.Input.Register", func(message []byte) error {
-		log.Println("Event Recieved ")
+		//log.Println("Event Recieved ")
 		usr, _ := db.CreateAccount("namename", "loginlogin", "passpass")
-		usr.CorrelationId = strings.ReplaceAll(string(message), "\"", "")
-		log.Println(strings.ReplaceAll(string(message), "\"", ""))
-		log.Println("Account created")
+		usr.CorrelationId = strings.Trim(string(message), "\"")
+		//log.Println(usr.CorrelationId)
+		//log.Println("Account created")
 		p.SendMessage("Riff.Core.Accounts.Output.Register", usr)
 		return nil
 	})

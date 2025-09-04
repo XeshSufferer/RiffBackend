@@ -6,7 +6,7 @@ using RiffCore.Tracker;
 
 var builder = WebApplication.CreateBuilder(args);
 
-await Task.Delay(1500);
+await Task.Delay(3000);
 
 builder.Services.AddOpenApi();
 
@@ -32,7 +32,7 @@ var rabbitService = app.Services.GetRequiredService<IRabbitMQService>();
 var tracker = app.Services.GetRequiredService<IUniversalRequestTracker>();
 var logger = app.Services.GetRequiredService<ILogger<RabbitMQService>>();
 
-logger.LogInformation("Initialized");
+//logger.LogInformation("Initialized");
 
 
 await rabbitService.InitializeAsync();
@@ -44,9 +44,10 @@ await rabbitService.StartConsumingAsync<TestMessage>("output", message =>
 
 await rabbitService.StartConsumingAsync<User>("Riff.Core.Accounts.Output.Register", message =>
 {
-    logger.LogInformation("Riff.Core.Accounts.Output.Register received");
-    logger.LogInformation("output correlationid {id}", message.CorrelationId);
+    //logger.LogInformation("Riff.Core.Accounts.Output.Register received");
+    //logger.LogInformation("output correlationid {id}", message.CorrelationId);
     tracker.TrySetResult(message.CorrelationId, message);
+    //logger.LogInformation("Response processed correct. {CorrelationId}", message.CorrelationId);
     return Task.CompletedTask;
 });
 
@@ -59,7 +60,7 @@ app.MapGet("/", async () =>
     string correlationId = tracker.CreatePendingRequest();
     var data = new TestMessage() { Message = "Write it me pls", CorrelationId = correlationId };
     rabbitService.SendMessageAsync<TestMessage>(data, "input");
-
+        
     var endedData = await tracker.WaitForResponseAsync<TestMessage>(correlationId);
     
     return endedData.Message;
@@ -70,7 +71,7 @@ app.MapGet("/reg", async () =>
 {
     string correlationId = tracker.CreatePendingRequest();
     await rabbitService.SendMessageAsync<string>(correlationId, "Riff.Core.Accounts.Input.Register");
-    logger.LogInformation("input correlationid {id}", correlationId);
+    //logger.LogInformation("input correlationid {id}", correlationId);
     
     
     var endedData = await tracker.WaitForResponseAsync<User>(correlationId);

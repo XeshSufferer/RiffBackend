@@ -44,7 +44,7 @@ public class UniversalRequestTracker : IUniversalRequestTracker
 
     public bool TrySetResult(string correlationId, object result)
     {
-        correlationId = correlationId.Replace("\"", string.Empty);
+        //correlationId = correlationId.Replace("\"", string.Empty);
         if (result == null)
         {
             return TrySetException(correlationId, new ArgumentNullException(nameof(result)));
