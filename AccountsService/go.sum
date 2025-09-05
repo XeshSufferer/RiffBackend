@@ -1,5 +1,7 @@
 github.com/XeshSufferer/Rabbilite v0.0.0-20250903171807-f395a428ed6e h1:s11O0Ozn9BJNu8H1ippcxJEnVAYKaNlyn2gvnVuiLPM=
 github.com/XeshSufferer/Rabbilite v0.0.0-20250903171807-f395a428ed6e/go.mod h1:vbHWBf9WcwgTEZNR7zz7X6kDMY68MfqmY9yCpfcj360=
+github.com/XeshSufferer/Rabbilite v0.0.0-20250905002515-45e883e28cb8 h1:4kJf8/8USwrD1V12L/IbonU2KaPpYG5M32fSokYeWwU=
+github.com/XeshSufferer/Rabbilite v0.0.0-20250905002515-45e883e28cb8/go.mod h1:vbHWBf9WcwgTEZNR7zz7X6kDMY68MfqmY9yCpfcj360=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/golang/snappy v0.0.4 h1:yAGX7huGHXlcLOEtBnF4w7FQwA26wojNCwOYAEhLjQM=

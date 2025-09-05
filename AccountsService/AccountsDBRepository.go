@@ -65,7 +65,7 @@ func (repo AccountsDBRepository) GetUserByHexID(_id string) models.User {
 
 func (repo AccountsDBRepository) CreateAccount(nick string, login string, password string) (*models.User, error) {
 
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password+login), bcrypt.DefaultCost)
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password+login), bcrypt.MinCost)
 	if err != nil {
 		log.Fatalf("password hashing failed: %v", err)
 	}
