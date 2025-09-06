@@ -3,7 +3,7 @@ package main
 import (
 	models "AccountsService/Models"
 	"context"
-	"fmt"
+	"errors"
 	"log"
 	"time"
 
@@ -101,12 +101,12 @@ func (repo *AccountsDBRepository) Login(login string, password string) (*models.
 
 	err := repo.client.Database("main").Collection("users").FindOne(ctx, filter).Decode(&user)
 	if err != nil {
-		return nil, fmt.Errorf("user not found")
+		return nil, nil
 	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password+login))
 	if err != nil {
-		return nil, fmt.Errorf("invalid password")
+		return nil, errors.New("invalid password found")
 	}
 
 	return &user, nil

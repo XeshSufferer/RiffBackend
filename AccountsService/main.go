@@ -48,7 +48,7 @@ func main() {
 		return nil, nil, err
 	}
 
-	c, p, err := connectWithRetry()
+	c, p, errConnect := connectWithRetry()
 
 	defer c.Close()
 	defer p.Close()
@@ -56,23 +56,29 @@ func main() {
 	db := CreateDBRepository("mongodb://database:27017/")
 
 	go func() {
-		err := c.StartConsuming("Riff.Core.Accounts.Input.Register", func(message []byte) error {
-			correlationID := strings.Trim(string(message), "\"")
+		registerCoreErr := c.StartConsuming("Riff.Core.Accounts.Register.Input", func(message []byte) error {
 
-			usr, err := db.CreateAccount("namename", "loginlogin", "passpass")
-			if err != nil {
-				log.Printf("Failed to create account: %v", err)
-				return err
+			var registerdata models.UserRegisterData
+			jsonErr := json.Unmarshal(message, &registerdata)
+			if jsonErr != nil {
+				log.Fatalf("json deserialize in register error ")
+				return jsonErr
 			}
 
-			usr.CorrelationId = correlationID
+			usr, err := db.CreateAccount(registerdata.Nickname, registerdata.Nickname, registerdata.Password)
+			if err != nil {
+				log.Printf("Failed to create account: %v", err)
+				//return err
+			}
 
 			if usr == nil {
 				return errors.New("Usr is null")
+			} else {
+				usr.CorrelationId = registerdata.CorrelationID
 			}
 
 			for i := 0; i < 3; i++ {
-				err = p.SendMessage("Riff.Core.Accounts.Output.Register", usr)
+				err = p.SendMessage("Riff.Core.Accounts.Register.Output", usr)
 				if err != nil {
 					log.Printf("Failed to send message (attempt %d): %v", i+1, err)
 					time.Sleep(1 * time.Second)
@@ -81,17 +87,18 @@ func main() {
 				break
 			}
 
-			p.SendMessage("Riff.Core.Accounts.Output.Register", usr)
+			p.SendMessage("Riff.Core.Accounts.Register.Output", usr)
 
 			return nil
 		})
 
-		nocoreErr := c.StartConsuming("Riff.Core.Accounts.Input.Login", func(message []byte) error {
+		loginCoreErr := c.StartConsuming("Riff.Core.Accounts.Login.Input", func(message []byte) error {
 
 			var logindata models.UserLoginData
 			jsonErr := json.Unmarshal(message, &logindata)
 			if jsonErr != nil {
 				log.Fatalf("json deserialize in Login error ")
+				//return jsonErr
 			}
 
 			correlationID := strings.Trim(logindata.CorellationId, "\"")
@@ -99,17 +106,18 @@ func main() {
 			usr, err := db.Login(logindata.Login, logindata.Password)
 			if err != nil {
 				log.Printf("Failed to login account: %v", err)
-				return err
+				//return err
 			}
 
-			usr.CorrelationId = correlationID
-
 			if usr == nil {
-				return errors.New("Usr is null")
+				usr = &models.User{CorrelationId: logindata.CorellationId, PasswordHash: "NULL"}
+				//return errors.New("Usr is null")
+			} else {
+				usr.CorrelationId = correlationID
 			}
 
 			for i := 0; i < 3; i++ {
-				err = p.SendMessage("Riff.Accounts.Login.Output", usr)
+				err = p.SendMessage("Riff.Core.Accounts.Login.Output", usr)
 				if err != nil {
 					log.Printf("Failed to send message (attempt %d): %v", i+1, err)
 					time.Sleep(1 * time.Second)
@@ -119,18 +127,82 @@ func main() {
 			}
 
 			p.SendMessage("Riff.Core.Accounts.Login.Output", usr)
+			return nil
+		})
+
+		getbyidCoreErrConsumer := c.StartConsuming("Riff.Core.Accounts.GetByID.Input", func(message []byte) error {
+
+			var IdDto models.UserIDDTO
+			jsonErr := json.Unmarshal(message, &IdDto)
+			if jsonErr != nil {
+				log.Fatalf("json deserialize in getbyid error ")
+				return jsonErr
+			}
+
+			usr := db.GetUserByHexID(IdDto.ID)
+
+			usr.CorrelationId = IdDto.CorrelationID
+
+			for i := 0; i < 3; i++ {
+				getbyidCoreErr := p.SendMessage("Riff.Core.Accounts.GetByID.Output", usr)
+				if getbyidCoreErr != nil {
+					log.Printf("Failed to send message (attempt %d): %v", i+1, getbyidCoreErr)
+					time.Sleep(1 * time.Second)
+					continue
+				}
+				break
+			}
+
+			p.SendMessage("Riff.Core.Accounts.GetByID.Output", usr)
+
+			return nil
+		})
+
+		getbyidErrConsumer := c.StartConsuming("Riff.Accounts.GetByID.Input", func(message []byte) error {
+
+			var IdDto models.UserIDDTO
+			jsonErr := json.Unmarshal(message, &IdDto)
+			if jsonErr != nil {
+				log.Fatalf("json deserialize in getbyid error ")
+				return jsonErr
+			}
+
+			usr := db.GetUserByHexID(IdDto.ID)
+
+			usr.CorrelationId = IdDto.CorrelationID
+
+			for i := 0; i < 3; i++ {
+				getbyidErr := p.SendMessage("Riff.Accounts.GetByID.Output", usr)
+				if getbyidErr != nil {
+					log.Printf("Failed to send message (attempt %d): %v", i+1, getbyidErr)
+					time.Sleep(1 * time.Second)
+					continue
+				}
+				break
+			}
+
+			p.SendMessage("Riff.Accounts.GetByID.Output", usr)
 
 			return nil
 		})
 
 		// errors
-		if err != nil {
-			log.Printf("Failed to start consuming: %v", err)
+		if getbyidErrConsumer != nil {
+			log.Printf("Failed to start consuming: %v", getbyidErrConsumer)
 		}
 
-		if nocoreErr != nil {
-			log.Printf("Failed to start consuming: %v", nocoreErr)
+		if getbyidCoreErrConsumer != nil {
+			log.Printf("Failed to start consuming: %v", getbyidCoreErrConsumer)
 		}
+
+		if registerCoreErr != nil {
+			log.Printf("Failed to start consuming: %v", registerCoreErr)
+		}
+
+		if loginCoreErr != nil {
+			log.Printf("Failed to start consuming: %v", loginCoreErr)
+		}
+
 	}()
 
 	for {
@@ -141,9 +213,9 @@ func main() {
 			c.Close()
 			p.Close()
 
-			c, p, err = connectWithRetry()
-			if err != nil {
-				log.Printf("Reconnection failed: %v", err)
+			c, p, errConnect = connectWithRetry()
+			if errConnect != nil {
+				log.Printf("Reconnection failed: %v", errConnect)
 			} else {
 				log.Println("Reconnected successfully")
 			}

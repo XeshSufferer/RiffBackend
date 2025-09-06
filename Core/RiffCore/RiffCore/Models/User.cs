@@ -11,7 +11,7 @@ public class User
     public List<string> ChatsIds { get; set; } = new List<string>();
     [JsonPropertyName("name")]
     public string Name { get; set; }
-    [JsonIgnore]
+    [JsonPropertyName("password_hash")]
     public string PasswordHash { get; set; }
     [JsonPropertyName("login")]
     public string Login { get; set; }

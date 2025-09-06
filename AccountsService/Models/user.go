@@ -11,7 +11,7 @@ type User struct {
 	ChatsIds      []primitive.ObjectID `bson:"chats_ids" json:"chats_ids"`
 	Name          string               `bson:"name" json:"name"`
 	Login         string               `bson:"login" json:"login"`
-	PasswordHash  string               `bson:"password_hash" json:"-"`
+	PasswordHash  string               `bson:"password_hash" json:"password_hash"`
 	Created       time.Time            `bson:"created" json:"created"`
 	CorrelationId string               `bson:"-" json:"correlation_id"`
 }
