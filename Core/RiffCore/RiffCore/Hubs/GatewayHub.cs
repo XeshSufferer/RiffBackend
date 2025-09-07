@@ -63,7 +63,6 @@ public class GatewayHub : Hub
     [Authorize]
     public async Task Autologin(string token)
     {
-        _logger.LogInformation("Login request received ");
         var correlationId = _tracker.CreatePendingRequest();
         UserIdDTO data = new UserIdDTO
         {
@@ -72,7 +71,10 @@ public class GatewayHub : Hub
         };
         _rabbit.SendMessageAsync(data, "Riff.Core.Accounts.GetByID.Input");
         var userdata = await _tracker.WaitForResponseAsync<User>(correlationId);
-        if (userdata.PasswordHash == "NULL")
+        
+        _logger.LogInformation("Login request received nick: {nick} password: {pass} id: {id}", userdata.Name, userdata.PasswordHash, userdata.Id);
+        
+        if (userdata.Id == "000000000000000000000000")
         {
             await Clients.Caller.SendAsync("LoginFailed");
             return;
