@@ -72,8 +72,6 @@ public class GatewayHub : Hub
         _rabbit.SendMessageAsync(data, "Riff.Core.Accounts.GetByID.Input");
         var userdata = await _tracker.WaitForResponseAsync<User>(correlationId);
         
-        _logger.LogInformation("Login request received nick: {nick} password: {pass} id: {id}", userdata.Name, userdata.PasswordHash, userdata.Id);
-        
         if (userdata.Id == "000000000000000000000000")
         {
             await Clients.Caller.SendAsync("LoginFailed");
