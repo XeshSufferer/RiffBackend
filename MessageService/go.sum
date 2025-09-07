@@ -1,0 +1,4 @@
+github.com/XeshSufferer/Rabbilite v0.0.0-20250905002515-45e883e28cb8 h1:4kJf8/8USwrD1V12L/IbonU2KaPpYG5M32fSokYeWwU=
+github.com/XeshSufferer/Rabbilite v0.0.0-20250905002515-45e883e28cb8/go.mod h1:vbHWBf9WcwgTEZNR7zz7X6kDMY68MfqmY9yCpfcj360=
+github.com/rabbitmq/amqp091-go v1.10.0 h1:STpn5XsHlHGcecLmMFCtg7mqq0RnD+zFr4uzukfVhBw=
+github.com/rabbitmq/amqp091-go v1.10.0/go.mod h1:Hy4jKW5kQART1u+JkDTF9YYOQUHXqMuhrgxOEeS7G4o=
