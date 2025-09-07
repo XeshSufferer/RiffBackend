@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.SignalR;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.SignalR;
 using RiffCore.Models;
 using RiffCore.Services;
 using RiffCore.Tracker;
@@ -45,6 +46,7 @@ public class GatewayHub : Hub
     {
         var correlationId = _tracker.CreatePendingRequest();
         data.CorrelationID = correlationId;
+        _logger.LogInformation($"Register request received from {data.Nickname}");
         _rabbit.SendMessageAsync<UserRegisterData>(data, "Riff.Core.Accounts.Register.Input");
         var userdata = await _tracker.WaitForResponseAsync<User>(correlationId);
 
@@ -56,5 +58,25 @@ public class GatewayHub : Hub
         
         var token = _jwt.GenerateToken(userdata.Id);
         await Clients.Caller.SendAsync("RegisterSuccess", token);
+    }
+
+    [Authorize]
+    public async Task Autologin(string token)
+    {
+        _logger.LogInformation("Login request received ");
+        var correlationId = _tracker.CreatePendingRequest();
+        UserIdDTO data = new UserIdDTO
+        {
+            CorrelationId = correlationId,
+            Id = Context.User.Identity.Name,
+        };
+        _rabbit.SendMessageAsync(data, "Riff.Core.Accounts.GetByID.Input");
+        var userdata = await _tracker.WaitForResponseAsync<User>(correlationId);
+        if (userdata.PasswordHash == "NULL")
+        {
+            await Clients.Caller.SendAsync("LoginFailed");
+            return;
+        }
+        await Clients.Caller.SendAsync("LoginSuccess", token);
     }
 }
