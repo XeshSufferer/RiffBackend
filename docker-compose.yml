@@ -14,14 +14,6 @@ services:
       database:
         condition: service_healthy
 
-  rabbitmqgotester:
-    build: ./RabbitMQGoTester
-    networks:
-      - main-network
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-
   accounts:
     build: ./AccountsService
     networks:

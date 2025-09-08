@@ -28,7 +28,30 @@ func CreateDBRepository(uri string) AccountsDBRepository {
 		log.Fatal(err)
 	}
 
-	return AccountsDBRepository{Uri: uri, client: *client}
+	db := AccountsDBRepository{Uri: uri, client: *client}
+	createIndexes(db)
+	return db
+}
+
+func createIndexes(repo AccountsDBRepository) error {
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	indexModels := []mongo.IndexModel{
+		{
+			Keys:    bson.D{{Key: "login", Value: 1}},
+			Options: options.Index().SetUnique(true),
+		},
+
+		{
+			Keys:    bson.D{{Key: "name", Value: 1}},
+			Options: options.Index().SetUnique(true),
+		},
+	}
+
+	_, err := repo.client.Database("main").Collection("users").Indexes().CreateMany(ctx, indexModels)
+	return err
 
 }
 
@@ -47,9 +70,10 @@ func (repo AccountsDBRepository) GetUserByName(name string) models.User {
 
 func (repo AccountsDBRepository) GetUserByHexID(_id string) models.User {
 
+	log.Printf("GetUserByHexID called with id: '%s'", _id)
 	id, err := primitive.ObjectIDFromHex(_id)
 	if err != nil {
-		log.Fatalf("From string to object Id decode error %v", err)
+		log.Printf("From string to object Id decode error %v", err)
 	}
 
 	filter := bson.M{"_id": id}
@@ -149,4 +173,34 @@ func (repo AccountsDBRepository) GetUserByID(id primitive.ObjectID) models.User 
 		log.Fatalf("User getting by id error %v", err)
 	}
 	return user
+}
+
+func (repo AccountsDBRepository) UpdateUser(user models.User) error {
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	_, err := repo.client.Database("main").Collection("users").ReplaceOne(ctx, bson.M{"_id": user.ID}, user)
+	return err
+}
+
+func (repo AccountsDBRepository) CreateChat(request models.ChatCreatingRequestDTO) (error, error, models.User, models.User, string) {
+
+	log.Println("object id generated")
+	newChatId := primitive.NewObjectID()
+	log.Printf("requester id %v", request.RequestedUsername)
+	requested := repo.GetUserByName(request.RequestedUsername)
+	log.Printf("requester id %v", request.RequesterId)
+	requester := repo.GetUserByHexID(request.RequesterId)
+	log.Printf("repo.GetUserByHexID(request.RequesterId) is ended")
+	requester.ChatsIds = append(requester.ChatsIds, newChatId)
+	requested.ChatsIds = append(requested.ChatsIds, newChatId)
+	log.Printf("appending ended")
+
+	err1 := repo.UpdateUser(requester)
+	err2 := repo.UpdateUser(requested)
+	log.Printf("Update user ended")
+
+	return err1, err2, requester, requested, newChatId.Hex()
+
 }
