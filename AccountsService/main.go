@@ -68,7 +68,6 @@ func main() {
 			usr, err := db.CreateAccount(registerdata.Nickname, registerdata.Nickname, registerdata.Password)
 			if err != nil {
 				log.Printf("Failed to create account: %v", err)
-				//return err
 			}
 
 			if usr == nil {
@@ -87,7 +86,7 @@ func main() {
 				break
 			}
 
-			p.SendMessage("Riff.Core.Accounts.Register.Output", usr)
+			//p.SendMessage("Riff.Core.Accounts.Register.Output", usr)
 
 			return nil
 		})
@@ -97,8 +96,7 @@ func main() {
 			var logindata models.UserLoginData
 			jsonErr := json.Unmarshal(message, &logindata)
 			if jsonErr != nil {
-				log.Fatalf("json deserialize in Login error ")
-				//return jsonErr
+				log.Printf("json deserialize in Login error %v", jsonErr)
 			}
 
 			correlationID := strings.Trim(logindata.CorellationId, "\"")
@@ -106,12 +104,10 @@ func main() {
 			usr, err := db.Login(logindata.Login, logindata.Password)
 			if err != nil {
 				log.Printf("Failed to login account: %v", err)
-				//return err
 			}
 
 			if usr == nil {
 				usr = &models.User{CorrelationId: logindata.CorellationId, PasswordHash: "NULL"}
-				//return errors.New("Usr is null")
 			} else {
 				usr.CorrelationId = correlationID
 			}
@@ -126,7 +122,7 @@ func main() {
 				break
 			}
 
-			p.SendMessage("Riff.Core.Accounts.Login.Output", usr)
+			//p.SendMessage("Riff.Core.Accounts.Login.Output", usr)
 			return nil
 		})
 
@@ -153,7 +149,7 @@ func main() {
 				break
 			}
 
-			p.SendMessage("Riff.Core.Accounts.GetByID.Output", usr)
+			//p.SendMessage("Riff.Core.Accounts.GetByID.Output", usr)
 
 			return nil
 		})
@@ -181,12 +177,58 @@ func main() {
 				break
 			}
 
-			p.SendMessage("Riff.Accounts.GetByID.Output", usr)
+			//p.SendMessage("Riff.Accounts.GetByID.Output", usr)
+
+			return nil
+		})
+
+		createCoreChatErrConsumer := c.StartConsuming("Riff.Core.Accounts.CreateChat.Input", func(message []byte) error {
+
+			log.Print(string(message))
+
+			var requestDto models.ChatCreatingRequestDTO
+			jsonErr := json.Unmarshal(message, &requestDto)
+
+			log.Println("json deserialize")
+			if jsonErr != nil {
+				log.Printf("json deserialize in creatingchat error %v", jsonErr)
+				return jsonErr
+			}
+
+			err1, err2, requester, requested, chatid := db.CreateChat(requestDto)
+			log.Println("end creating chat")
+			if err1 != nil || err2 != nil {
+				log.Printf("Create chat error err1 = %v  err2 = %v", err1, err2)
+			}
+
+			acceptResponse := models.AcceptChatCreatingDTO{
+				Requester:     requester,
+				Requested:     requested,
+				ChatId:        chatid,
+				CorrelationId: requestDto.CorrelationId,
+			}
+
+			for i := 0; i < 3; i++ {
+				getbyidErr := p.SendMessage("Riff.Core.Accounts.CreateChat.Output", acceptResponse)
+				if getbyidErr != nil {
+					log.Printf("Failed to send message (attempt %d): %v", i+1, getbyidErr)
+					time.Sleep(1 * time.Second)
+					continue
+				}
+				break
+			}
+
+			//p.SendMessage("Riff.Accounts.CreateChat.Output", acceptResponse)
 
 			return nil
 		})
 
 		// errors
+
+		if createCoreChatErrConsumer != nil {
+			log.Printf("Failed to start consuming: %v", createCoreChatErrConsumer)
+		}
+
 		if getbyidErrConsumer != nil {
 			log.Printf("Failed to start consuming: %v", getbyidErrConsumer)
 		}
@@ -221,5 +263,4 @@ func main() {
 			}
 		}
 	}
-
 }

@@ -11,7 +11,7 @@ using RiffCore.Tracker;
 
 var builder = WebApplication.CreateBuilder(args);
 
-await Task.Delay(3000);
+await Task.Delay(4000);
 
 builder.Services.AddOpenApi();
 builder.Services.AddSignalR();
