@@ -14,6 +14,7 @@ import (
 
 var (
 	rabbitUri string = "amqp://guest:guest@rabbitmq:5672/"
+	dbUri     string = "mongodb://database:27017/"
 )
 
 func main() {
@@ -53,7 +54,7 @@ func main() {
 	defer c.Close()
 	defer p.Close()
 
-	db := CreateDBRepository("mongodb://database:27017/")
+	db := CreateDBRepository(dbUri)
 
 	go func() {
 		registerCoreErr := c.StartConsuming("Riff.Core.Accounts.Register.Input", func(message []byte) error {
@@ -182,52 +183,7 @@ func main() {
 			return nil
 		})
 
-		createCoreChatErrConsumer := c.StartConsuming("Riff.Core.Accounts.CreateChat.Input", func(message []byte) error {
-
-			log.Print(string(message))
-
-			var requestDto models.ChatCreatingRequestDTO
-			jsonErr := json.Unmarshal(message, &requestDto)
-
-			log.Println("json deserialize")
-			if jsonErr != nil {
-				log.Printf("json deserialize in creatingchat error %v", jsonErr)
-				return jsonErr
-			}
-
-			err1, err2, requester, requested, chatid := db.CreateChat(requestDto)
-			log.Println("end creating chat")
-			if err1 != nil || err2 != nil {
-				log.Printf("Create chat error err1 = %v  err2 = %v", err1, err2)
-			}
-
-			acceptResponse := models.AcceptChatCreatingDTO{
-				Requester:     requester,
-				Requested:     requested,
-				ChatId:        chatid,
-				CorrelationId: requestDto.CorrelationId,
-			}
-
-			for i := 0; i < 3; i++ {
-				getbyidErr := p.SendMessage("Riff.Core.Accounts.CreateChat.Output", acceptResponse)
-				if getbyidErr != nil {
-					log.Printf("Failed to send message (attempt %d): %v", i+1, getbyidErr)
-					time.Sleep(1 * time.Second)
-					continue
-				}
-				break
-			}
-
-			//p.SendMessage("Riff.Accounts.CreateChat.Output", acceptResponse)
-
-			return nil
-		})
-
 		// errors
-
-		if createCoreChatErrConsumer != nil {
-			log.Printf("Failed to start consuming: %v", createCoreChatErrConsumer)
-		}
 
 		if getbyidErrConsumer != nil {
 			log.Printf("Failed to start consuming: %v", getbyidErrConsumer)

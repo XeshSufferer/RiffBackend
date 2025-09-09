@@ -21,6 +21,15 @@ services:
     depends_on:
       - core
 
+  chats:
+    build: ./ChatService
+    networks:
+      - main-network
+    depends_on:
+      - core
+    ports:
+      - "3031:8081"
+
   database:
     image: mongo:latest
     ports:

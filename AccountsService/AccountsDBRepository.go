@@ -184,23 +184,21 @@ func (repo AccountsDBRepository) UpdateUser(user models.User) error {
 	return err
 }
 
-func (repo AccountsDBRepository) CreateChat(request models.ChatCreatingRequestDTO) (error, error, models.User, models.User, string) {
+func (repo AccountsDBRepository) AddUserToChat(userId string, chatId string) error {
 
-	log.Println("object id generated")
-	newChatId := primitive.NewObjectID()
-	log.Printf("requester id %v", request.RequestedUsername)
-	requested := repo.GetUserByName(request.RequestedUsername)
-	log.Printf("requester id %v", request.RequesterId)
-	requester := repo.GetUserByHexID(request.RequesterId)
-	log.Printf("repo.GetUserByHexID(request.RequesterId) is ended")
-	requester.ChatsIds = append(requester.ChatsIds, newChatId)
-	requested.ChatsIds = append(requested.ChatsIds, newChatId)
-	log.Printf("appending ended")
+	if userId == "" || chatId == "" {
+		return errors.New("ids is empty")
+	}
 
-	err1 := repo.UpdateUser(requester)
-	err2 := repo.UpdateUser(requested)
-	log.Printf("Update user ended")
+	user := repo.GetUserByHexID(userId)
 
-	return err1, err2, requester, requested, newChatId.Hex()
+	ChatobjectId, toObjectIdErr := primitive.ObjectIDFromHex(chatId)
 
+	if toObjectIdErr != nil {
+		return toObjectIdErr
+	}
+
+	user.ChatsIds = append(user.ChatsIds, ChatobjectId)
+	repo.UpdateUser(user)
+	return nil
 }

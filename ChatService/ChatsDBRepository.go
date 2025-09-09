@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -41,12 +42,20 @@ func (repo ChatsDBRepository) GetChatByHexId(id string) models.Chat {
 	return chat
 }
 
-func (repo ChatsDBRepository) CreateChat(chat models.Chat) error {
+func (repo ChatsDBRepository) CreateChat(user1 primitive.ObjectID, user2 primitive.ObjectID) error {
+
+	newChat := models.Chat{
+		ID:          primitive.NewObjectID(),
+		Description: "Private messages",
+		Name:        "PM",
+		Created:     time.Now(),
+		MembersId:   []primitive.ObjectID{user1, user2},
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	_, err := repo.client.Database("main").Collection("chats").InsertOne(ctx, chat)
+	_, err := repo.client.Database("main").Collection("chats").InsertOne(ctx, newChat)
 
 	return err
 }
