@@ -1,7 +1,7 @@
 package main
 
 import (
-	models "chatservice/Models"
+	models "ChatsService/Models"
 	"context"
 	"log"
 	"time"
