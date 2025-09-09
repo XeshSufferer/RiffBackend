@@ -155,7 +155,7 @@ func (repo AccountsDBRepository) DeleteAccount(user *models.User) bool {
 	_, err := repo.client.Database("main").Collection("users").DeleteOne(ctx, (bson.M{"_id": user.ID}))
 
 	if err != nil {
-		log.Fatalf("Delete account error: %v", err)
+		log.Printf("Delete account error: %v", err)
 		return false
 	}
 	return true
