@@ -56,8 +56,7 @@ func InitializeHttpConsume(db *AccountsDBRepository) {
 			return
 		}
 
-		// Добавляем чат к пользователю
-		// Ваша логика здесь...
+		_db.AddUserToChat(userID, chatID)
 
 		c.JSON(200, models.BooleanResponse{Success: true})
 	})

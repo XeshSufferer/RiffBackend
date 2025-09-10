@@ -5,9 +5,9 @@ namespace RiffCore.Models;
 public class ChatCreatingAcceptDTO
 {
     [JsonPropertyName("requested")]
-    public User Requested { get; set; }
+    public string Requested { get; set; }
     [JsonPropertyName("requester")]
-    public User Requester { get; set; }
+    public string Requester { get; set; }
     [JsonPropertyName("correlation_id")]
     public string CorrelationId { get; set; }
     [JsonPropertyName("chat_id")]

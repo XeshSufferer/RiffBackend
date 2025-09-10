@@ -42,7 +42,7 @@ public class GatewayRabbitConsumer : IGatewayRabbitConsumer
             return Task.CompletedTask;
         });
 
-        await _rabbit.StartConsumingAsync<ChatCreatingAcceptDTO>("Riff.Core.Accounts.CreateChat.Output", accept =>
+        await _rabbit.StartConsumingAsync<ChatCreatingAcceptDTO>("Riff.Core.Chats.Creating.Output", accept =>
         {
             _tracker.TrySetResult(accept.CorrelationId, accept);
             return Task.CompletedTask;

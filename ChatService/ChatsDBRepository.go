@@ -42,7 +42,7 @@ func (repo ChatsDBRepository) GetChatByHexId(id string) models.Chat {
 	return chat
 }
 
-func (repo ChatsDBRepository) CreateChat(user1 primitive.ObjectID, user2 primitive.ObjectID) error {
+func (repo ChatsDBRepository) CreateChat(user1 primitive.ObjectID, user2 primitive.ObjectID) (error, models.Chat) {
 
 	newChat := models.Chat{
 		ID:          primitive.NewObjectID(),
@@ -57,7 +57,7 @@ func (repo ChatsDBRepository) CreateChat(user1 primitive.ObjectID, user2 primiti
 
 	_, err := repo.client.Database("main").Collection("chats").InsertOne(ctx, newChat)
 
-	return err
+	return err, newChat
 }
 
 func (repo ChatsDBRepository) UpdateChat(chat *models.Chat) (models.Chat, error) {

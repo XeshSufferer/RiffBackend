@@ -55,6 +55,7 @@ func main() {
 	defer p.Close()
 
 	db := CreateDBRepository(dbUri)
+	InitializeHttpConsume(&db)
 
 	go func() {
 		registerCoreErr := c.StartConsuming("Riff.Core.Accounts.Register.Input", func(message []byte) error {

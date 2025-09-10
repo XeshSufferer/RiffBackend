@@ -151,15 +151,33 @@ public class GatewayHub : Hub
         
         _logger.LogInformation("Builded chat creating request correlation: {cor_id} | requested username: {username} | requesterId : {id}", data.CorrelationId, data.RequestedUsername, data.RequesterId);
         
-        await _rabbit.SendMessageAsync(data, "Riff.Core.Accounts.CreateChat.Input");
+        await _rabbit.SendMessageAsync(data, "Riff.Core.Chats.Creating.Input");
         ChatCreatingAcceptDTO responseData = await _tracker.WaitForResponseAsync<ChatCreatingAcceptDTO>(correlationId);
         
-        _logger.LogInformation("Response data: requester: {requesterID} requested: {requestedID}", responseData.Requester.Id, responseData.Requested.Id);
+        _logger.LogInformation("Response data: requester: {requesterID} requested: {requestedID}", responseData.Requester, responseData.Requested);
         
-        await AddUserToGroups(responseData.Requester.Id, responseData.Requester.ChatsIds);
-        await AddUserToGroups(responseData.Requested.Id, responseData.Requested.ChatsIds);
+        await AddToNewChatGroup(responseData.Requested, responseData.ChatId);
+        await AddToNewChatGroup(responseData.Requester, responseData.ChatId);
 
         await Clients.Group(responseData.ChatId + "_chat").SendAsync("OnChatCreated", "yet another chat");
+    }
+
+    private async Task AddToNewChatGroup(string userId, string chatId)
+    {
+        if (UserConnections.TryGetValue(userId, out var connections))
+        {
+            foreach (var connectionId in connections.ToList())
+            {
+                await Groups.AddToGroupAsync(connectionId, chatId + "_chat");
+                _logger.LogInformation("User {UserId} added to chat {ChatId} via connection {ConnectionId}",
+                    userId, chatId, connectionId);
+            }
+        }
+        else
+        {
+            _logger.LogWarning("User {UserId} has no active connections when trying to add to chat {ChatId}", 
+                userId, chatId);
+        }
     }
 
     private async Task AddUserToGroups(string userId, List<string> chatIds)

@@ -57,7 +57,7 @@ func main() {
 	db := CreateDBRepository(dbUri)
 
 	go func() {
-		c.StartConsuming("Riff.Chats.Creating.Input", func(message []byte) error {
+		c.StartConsuming("Riff.Core.Chats.Creating.Input", func(message []byte) error {
 
 			var requestDto models.ChatCreatingRequestDTO
 			jsonErr := json.Unmarshal(message, &requestDto)
@@ -84,10 +84,30 @@ func main() {
 				log.Printf("Ошибка преобразования RequestedId: %v", err)
 				return err
 			}
-			err = db.CreateChat(requesterObjId, requestedObjId)
+			err, newChat := db.CreateChat(requesterObjId, requestedObjId)
 			if err != nil {
 				log.Print(err)
 				return err
+			}
+
+			response := models.AcceptChatCreatingDTO{
+				RequesterId:   requestDto.RequesterId,
+				RequestedId:   _requestedId,
+				CorrelationId: requestDto.CorrelationId,
+				ChatId:        newChat.ID.Hex(),
+			}
+
+			addUserToChat(requestDto.RequesterId, newChat.ID.Hex())
+			addUserToChat(_requestedId, newChat.ID.Hex())
+
+			for i := 0; i < 3; i++ {
+				getbyidErr := p.SendMessage("Riff.Core.Chats.Creating.Output", response)
+				if getbyidErr != nil {
+					log.Printf("Failed to send message (attempt %d): %v", i+1, getbyidErr)
+					time.Sleep(1 * time.Second)
+					continue
+				}
+				break
 			}
 
 			return nil
@@ -110,6 +130,23 @@ func main() {
 			}
 		}
 	}
+}
+
+func addUserToChat(userID, chatID string) error {
+	url := fmt.Sprintf("http://accounts:8081/user/%s/addToChat/%s", userID, chatID)
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Post(url, "application/json", nil)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return fmt.Errorf("failed to add user to chat: status %d", resp.StatusCode)
+	}
+
+	return nil
 }
 
 func checkUserExists(username string) bool {
