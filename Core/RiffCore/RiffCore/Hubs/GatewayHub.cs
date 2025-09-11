@@ -76,7 +76,7 @@ public class GatewayHub : Hub
         _logger.LogInformation($"Login request received {data.Login} {data.Password}");
         var correlationId = _tracker.CreatePendingRequest();
         data.CorrelationId = correlationId;
-        _rabbit.SendMessageAsync<UserLoginData>(data, "Riff.Core.Accounts.Login.Input");
+        await _rabbit.SendMessageAsync<UserLoginData>(data, "Riff.Core.Accounts.Login.Input");
         var userdata = await _tracker.WaitForResponseAsync<User>(correlationId);
 
         if (userdata.PasswordHash == "NULL")
@@ -95,7 +95,7 @@ public class GatewayHub : Hub
         var correlationId = _tracker.CreatePendingRequest();
         data.CorrelationID = correlationId;
         _logger.LogInformation("Register request received from {nickname}", data.Nickname);
-        _rabbit.SendMessageAsync<UserRegisterData>(data, "Riff.Core.Accounts.Register.Input");
+        await _rabbit.SendMessageAsync<UserRegisterData>(data, "Riff.Core.Accounts.Register.Input");
         var userdata = await _tracker.WaitForResponseAsync<User>(correlationId);
 
         if (userdata.PasswordHash == "NULL")
@@ -118,7 +118,7 @@ public class GatewayHub : Hub
             CorrelationId = correlationId,
             Id = Context.User.Identity.Name,
         };
-        _rabbit.SendMessageAsync(data, "Riff.Core.Accounts.GetByID.Input");
+        await _rabbit.SendMessageAsync(data, "Riff.Core.Accounts.GetByID.Input");
         var userdata = await _tracker.WaitForResponseAsync<User>(correlationId);
         
         
@@ -133,9 +133,28 @@ public class GatewayHub : Hub
     }
 
     [Authorize]
-    public async Task SendMessage(MessageDTO message)
+    public async Task SendMessage(MessageSendingDTO message)
     {
-        await Clients.Group(message.ChatId + "_chat").SendAsync("OnMessageReceived", message);
+        string correlationid = _tracker.CreatePendingRequest();
+
+        var buildedMessage = new Message{
+            Text = message.Message,
+            SenderId = Context.User.Identity.Name,
+            ChatId = message.ChatId,
+            Created = DateTime.Now,
+            IsModified = false,
+            CorrelationId = correlationid
+        };
+
+        await _rabbit.SendMessageAsync<Message>(buildedMessage, "Riff.Core.Messages.SendMessage.Input");
+        Message data = await _tracker.WaitForResponseAsync<Message>(correlationid);
+
+        if(data.SenderId == "000000000000000000000000")
+        {
+            return;
+        }
+
+        await Clients.Group(message.ChatId + "_chat").SendAsync("OnMessageReceived", data);
     }
 
     [Authorize]
@@ -159,7 +178,13 @@ public class GatewayHub : Hub
         await AddToNewChatGroup(responseData.Requested, responseData.ChatId);
         await AddToNewChatGroup(responseData.Requester, responseData.ChatId);
 
-        await Clients.Group(responseData.ChatId + "_chat").SendAsync("OnChatCreated", "yet another chat");
+        Chat chat = new Chat{
+            Id = responseData.ChatId,
+            Name = responseData.Requester + " " + responseData.Requested,
+            
+        };
+
+        await Clients.Group(responseData.ChatId + "_chat").SendAsync("OnChatCreated", chat);
     }
 
     private async Task AddToNewChatGroup(string userId, string chatId)
@@ -187,12 +212,11 @@ public class GatewayHub : Hub
             _logger.LogInformation("Adding user {UserId} to groups. Connections: {Count}, Chats: {ChatCount}",
                 userId, connections.Count, chatIds?.Count ?? 0);
         
-            foreach (var connectionId in connections.ToList()) // ToList для thread safety
+            foreach (var connectionId in connections.ToList())
             {
-                // Добавляем в персональную группу пользователя
                 await Groups.AddToGroupAsync(connectionId, userId + "_user");
             
-                // Добавляем во все чаты пользователя
+                
                 if (chatIds != null)
                 {
                     foreach (var chatId in chatIds)

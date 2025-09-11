@@ -30,6 +30,13 @@ services:
     ports:
       - "3031:8081"
 
+  messages:
+    build: ./MessageService
+    networks:
+      - main-network
+    depends_on:
+      - core
+
   database:
     image: mongo:latest
     ports:

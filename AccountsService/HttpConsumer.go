@@ -80,6 +80,39 @@ func InitializeHttpConsume(db *AccountsDBRepository) {
 		ctx.JSON(200, models.StringResponse{Result: user.ID.Hex()})
 	})
 
+	router.GET("/userHaveAChatById/:id/:chatid", func(ctx *gin.Context) {
+
+		_id := ctx.Param("id")
+		_chatid := ctx.Param("chatid")
+
+		if _id == "" {
+			ctx.JSON(400, models.BooleanResponse{Success: false})
+			return
+		}
+
+		user := _db.GetUserByHexID(_id)
+
+		if user.ID.IsZero() {
+			ctx.JSON(404, models.BooleanResponse{Success: false})
+			return
+		}
+
+		chatFound := false
+		for _, chatId := range user.ChatsIds {
+			if chatId.Hex() == _chatid {
+				chatFound = true
+				break
+			}
+		}
+		if chatFound {
+			ctx.JSON(200, models.BooleanResponse{Success: true})
+			return
+		} else {
+			ctx.JSON(200, models.BooleanResponse{Success: false})
+			return
+		}
+	})
+
 	go func() {
 		router.Run(":8081")
 	}()

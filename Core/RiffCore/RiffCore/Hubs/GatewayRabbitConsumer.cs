@@ -47,6 +47,12 @@ public class GatewayRabbitConsumer : IGatewayRabbitConsumer
             _tracker.TrySetResult(accept.CorrelationId, accept);
             return Task.CompletedTask;
         });
+
+        await _rabbit.StartConsumingAsync<Message>("Riff.Core.Messages.SendMessage.Output", message => 
+        {
+            _tracker.TrySetResult(message.CorrelationId, message);
+            return Task.CompletedTask;
+        });
         
         _isConsume = true;
     }

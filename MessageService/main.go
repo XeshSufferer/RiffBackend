@@ -1,14 +1,19 @@
 package main
 
 import (
+	models "MessageServvice/Models"
+	"encoding/json"
+	"fmt"
 	"log"
+	"net/http"
 	"time"
 
 	rabbitmq "github.com/XeshSufferer/Rabbilite/rabbilite"
 )
 
 var (
-	rabbitUri = "amqp://guest:guest@rabbitmq:5672/"
+	rabbitUri        = "amqp://guest:guest@rabbitmq:5672/"
+	dbUri     string = "mongodb://database:27017/"
 )
 
 func main() {
@@ -45,9 +50,41 @@ func main() {
 	defer c.Close()
 	defer p.Close()
 
-	go func() {
+	db := CreateMessagesDBRepository(dbUri)
 
-	}()
+	consuming := func() {
+
+		c.StartConsuming("Riff.Core.Messages.SendMessage.Input", func(message []byte) error {
+
+			var msg models.Message
+			err := json.Unmarshal(message, &msg)
+			if err != nil {
+				log.Println(err)
+				return nil
+			}
+
+			if !ChatExistInUser(msg.SenderId.Hex(), msg.ChatId.Hex()) {
+				p.SendMessage("Riff.Core.Messages.SendMessage.Output", models.Message{CorrelationId: msg.CorrelationId})
+				return nil
+			}
+
+			db.AppendMessage(msg.ChatId.Hex(), msg)
+
+			for i := 0; i < 3; i++ {
+				err = p.SendMessage("Riff.Core.Messages.SendMessage.Output", msg)
+				if err != nil {
+					log.Printf("Failed to send message (attempt %d): %v", i+1, err)
+					time.Sleep(1 * time.Second)
+					continue
+				}
+				break
+			}
+			return nil
+		})
+
+	}
+
+	go consuming()
 
 	for {
 		time.Sleep(1 * time.Minute)
@@ -57,6 +94,8 @@ func main() {
 			p.Close()
 
 			c, p, errConnect = connectWithRetry()
+			go consuming()
+
 			if errConnect != nil {
 				log.Printf("Reconnection failed: %v", errConnect)
 			} else {
@@ -64,4 +103,30 @@ func main() {
 			}
 		}
 	}
+
+}
+
+func ChatExistInUser(userid string, chatid string) bool {
+	url := fmt.Sprintf("http://accounts:8081/userHaveAChatById/%s/%s", userid, chatid)
+
+	resp, err := http.Get(url)
+	if err != nil {
+		return false
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == 404 {
+		return false
+	}
+
+	if resp.StatusCode != 200 {
+		return false
+	}
+
+	var response models.BooleanResponse
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		return false
+	}
+
+	return response.Success
 }
