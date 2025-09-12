@@ -87,7 +87,7 @@ public class GatewayHub : Hub
         await AddUserToGroups(userdata.Id, userdata.ChatsIds);
         var token = _jwt.GenerateToken(userdata.Id);
         
-        await Clients.Caller.SendAsync("LoginSuccess", token);
+        await Clients.Caller.SendAsync("LoginSuccess", token, userdata.Id);
     }
 
     public async Task Register(UserRegisterData data)
@@ -105,7 +105,7 @@ public class GatewayHub : Hub
         }
         await AddUserToGroups(userdata.Id, userdata.ChatsIds);
         var token = _jwt.GenerateToken(userdata.Id);
-        await Clients.Caller.SendAsync("RegisterSuccess", token);
+        await Clients.Caller.SendAsync("RegisterSuccess", token, userdata.Id);
     }
     
     
@@ -129,7 +129,7 @@ public class GatewayHub : Hub
         }
         
         await AddUserToGroups(userdata.Id, userdata.ChatsIds);
-        await Clients.Caller.SendAsync("LoginSuccess", token);
+        await Clients.Caller.SendAsync("LoginSuccess", token, userdata.Id);
     }
 
     [Authorize]
