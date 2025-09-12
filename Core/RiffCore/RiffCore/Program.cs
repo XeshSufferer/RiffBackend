@@ -71,6 +71,9 @@ await rabbitService.InitializeAsync();
 
 app.MapHub<GatewayHub>("api/gateway");
 
+app.MapGet("/health", () => "OK");
+
+
 await app.Services.GetRequiredService<IGatewayRabbitConsumer>().StartConsume();
 
 app.Run();
