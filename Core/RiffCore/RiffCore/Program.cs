@@ -20,16 +20,18 @@ builder.Services.AddSignalR();
 builder.Services.AddSingleton<IRabbitMQService>(provider =>
 {
     var logger = provider.GetRequiredService<ILogger<RabbitMQService>>();
-    var service = new RabbitMQService("rabbitmq", 5672, "guest", "guest", logger);
+    var service = new RabbitMQService(builder.Configuration["RabbitMQ:Host"], 
+    int.Parse(builder.Configuration["RabbitMQ:Port"]), 
+    builder.Configuration["RabbitMQ:Username"], 
+    builder.Configuration["RabbitMQ:Password"], logger);
     return service;
 });
 builder.Services.AddSingleton<IUniversalRequestTracker, UniversalRequestTracker>();
 builder.Services.AddSingleton<IJWTService, JWTService>(p => new JWTService(
-    "keykeykeykeykeykeykeykeykeykeykeykeykeykeykeykeykeykeykeykeykeykeykeykey", "server", "client"));
+        builder.Configuration["JWT:SecretKey"], 
+        builder.Configuration["JWT:Issuer"], 
+        builder.Configuration["JWT:Audience"]));
 builder.Services.AddSingleton<IGatewayRabbitConsumer, GatewayRabbitConsumer>();
-
-
-// Gateway hub
 
 
 // Auth Options
@@ -41,12 +43,12 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         {
             NameClaimType = ClaimTypes.Name,
             ValidateIssuer = true,
-            ValidIssuer = "server",
+            ValidIssuer = builder.Configuration["JWT:Issuer"],
             ValidateAudience = true,
-            ValidAudience = "client",
+            ValidAudience = builder.Configuration["JWT:Audience"],
             ValidateLifetime = false,
             IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes("keykeykeykeykeykeykeykeykeykeykeykeykeykeykeykeykeykeykeykeykeykeykeykey")),
+                Encoding.UTF8.GetBytes(builder.Configuration["JWT:SecretKey"])),
             ValidateIssuerSigningKey = true,
         };
     });
