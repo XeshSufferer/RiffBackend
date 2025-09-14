@@ -1,13 +1,11 @@
-using System.Net;
 using System.Security.Claims;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
-using RabbitMQ.Client;
 using RiffCore.Hubs;
-using RiffCore.Models;
 using RiffCore.Services;
 using RiffCore.Tracker;
+using RiffCore.Сache;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,6 +13,14 @@ await Task.Delay(4000);
 
 builder.Services.AddOpenApi();
 builder.Services.AddSignalR();
+
+
+builder.Services.AddStackExchangeRedisCache(options =>
+{
+    options.Configuration = $"{builder.Configuration["Redis:ConnectionString"]},abortConnect=false";
+    options.InstanceName = "RiffCore";
+});
+
 
 // DI
 builder.Services.AddSingleton<IRabbitMQService>(provider =>
@@ -32,7 +38,7 @@ builder.Services.AddSingleton<IJWTService, JWTService>(p => new JWTService(
         builder.Configuration["JWT:Issuer"], 
         builder.Configuration["JWT:Audience"]));
 builder.Services.AddSingleton<IGatewayRabbitConsumer, GatewayRabbitConsumer>();
-
+builder.Services.AddSingleton<ICacheService, RedisService>();
 
 // Auth Options
 

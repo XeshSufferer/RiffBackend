@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.SignalR;
 using RiffCore.Models;
 using RiffCore.Services;
 using RiffCore.Tracker;
+using RiffCore.Сache;
 
 namespace RiffCore.Hubs;
 
@@ -14,15 +15,18 @@ public class GatewayHub : Hub
     private readonly ILogger<GatewayHub> _logger;
     private readonly IUniversalRequestTracker  _tracker;
     private readonly IRabbitMQService _rabbit;
+    private readonly ICacheService _cache;
     
     private static readonly ConcurrentDictionary<string, List<string>> UserConnections = new();
+    private readonly ConcurrentDictionary<string, List<Message>> OfflineMessages = new();
     
-    public GatewayHub(IJWTService jwt,  ILogger<GatewayHub> logger, IUniversalRequestTracker tracker,  IRabbitMQService rabbit)
+    public GatewayHub(IJWTService jwt,  ILogger<GatewayHub> logger, IUniversalRequestTracker tracker,  IRabbitMQService rabbit, ICacheService cache)
     {
         _jwt = jwt;
         _logger = logger;
         _tracker = tracker;
         _rabbit = rabbit;
+        _cache = cache;
     }
     
     
@@ -137,6 +141,8 @@ public class GatewayHub : Hub
     {
         string correlationid = _tracker.CreatePendingRequest();
 
+
+        
         var buildedMessage = new Message{
             Text = message.Message,
             SenderId = Context.User.Identity.Name,
