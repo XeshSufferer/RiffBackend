@@ -75,7 +75,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors("Cors");
-//app.UseHttpsRedirection();
+app.UseRouting();
+app.UseHttpsRedirection();
 
 
 // Runtime
