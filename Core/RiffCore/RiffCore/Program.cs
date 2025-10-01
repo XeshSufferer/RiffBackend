@@ -14,6 +14,14 @@ await Task.Delay(4000);
 builder.Services.AddOpenApi();
 builder.Services.AddSignalR();
 
+builder.Services.AddCors(options =>
+     {
+         options.AddPolicy("Cors",
+             builder => builder.AllowAnyOrigin()
+                               .AllowAnyMethod()
+                               .AllowAnyHeader());
+     });
+
 
 builder.Services.AddStackExchangeRedisCache(options =>
 {
@@ -65,6 +73,7 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
+app.UseCors("Cors");
 //app.UseHttpsRedirection();
 
 
