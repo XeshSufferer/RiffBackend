@@ -17,7 +17,7 @@ builder.Services.AddSignalR();
 builder.Services.AddCors(options =>
      {
          options.AddPolicy("Cors",
-             builder => builder.AllowAnyOrigin()
+             builder => builder.AllowCredentials()
                                .AllowAnyMethod()
                                .AllowAnyHeader());
      });
